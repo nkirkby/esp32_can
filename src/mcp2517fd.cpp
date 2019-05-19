@@ -278,7 +278,7 @@ int MCP2517FD::Init(uint32_t CAN_Bus_Speed, uint8_t Freq, uint8_t SJW) {
 		      interruptFlags.word = Read(ADDR_CiINT);
 		      if(!interruptFlags.bF.IF.CERRIF) {
 		        // to get here we must have received something without errors
-		        Mode(CAN_NORMAL_MODE);
+		        SetMode(CAN_NORMAL_MODE);
 			      savedNominalBaud = i;
 			      savedFreq = Freq;	
 			      running = 1;
@@ -327,7 +327,7 @@ uint32_t MCP2517FD::initFD(uint32_t nominalRate, uint32_t dataRate)
 		      interruptFlags.word = Read(ADDR_CiINT);
 		      if(!interruptFlags.bF.IF.CERRIF) {
 		        // to get here we must have received something without errors
-		        Mode(CAN_NORMAL_MODE);
+		        SetMode(CAN_NORMAL_MODE);
 			      savedNominalBaud = i;
             savedDataBaud = dataRate;
 			      savedFreq = 40;	
@@ -379,7 +379,6 @@ void MCP2517FD::commonInit()
     debugVal = Read(ADDR_CiTSCON);
     Serial.println(debugVal, BIN);
   }
-
 
   //Now set up each FIFO we're going to use (transmit queue is technically FIFO0)
   fifoCon.txBF.TxEnable = 1; //Make FIFO1 a TX FIFO
@@ -481,14 +480,14 @@ bool MCP2517FD::_init(uint32_t CAN_Bus_Speed, uint8_t Freq, uint8_t SJW, bool au
 
   if(!autoBaud) {
     // Return to Normal mode
-    if(!Mode(CAN_CLASSIC_MODE)) 
+    if(!SetMode(CAN_CLASSIC_MODE)) 
     {
         if (DEBUG_PRINT) Serial.println("Could not enter normal mode");
         return false;
     }
   } else {
     // Set to Listen Only mode
-    if(!Mode(CAN_LISTEN_ONLY_MODE)) 
+    if(!SetMode(CAN_LISTEN_ONLY_MODE)) 
     {
         if (DEBUG_PRINT) Serial.println("Could not enter listen only mode");
         return false;
@@ -606,14 +605,14 @@ bool MCP2517FD::_initFD(uint32_t nominalSpeed, uint32_t dataSpeed, uint8_t freq,
 
   if(!autoBaud) {
     // Return to Normal mode
-    if(!Mode(CAN_NORMAL_MODE)) 
+    if(!SetMode(CAN_NORMAL_MODE)) 
     {
         if (DEBUG_PRINT) Serial.println("Could not enter normal mode");
         return false;
     }
   } else {
     // Set to Listen Only mode
-    if(!Mode(CAN_LISTEN_ONLY_MODE)) 
+    if(!SetMode(CAN_LISTEN_ONLY_MODE)) 
     {
         if (DEBUG_PRINT) Serial.println("Could not enter listen only mode");
         return false;
@@ -719,23 +718,23 @@ uint32_t MCP2517FD::set_baudrateFD(uint32_t nominalSpeed, uint32_t dataSpeed)
 void MCP2517FD::setListenOnlyMode(bool state)
 {
     if (state)
-        Mode(CAN_LISTEN_ONLY_MODE); //listen only seems to always accept FD frames
+        SetMode(CAN_LISTEN_ONLY_MODE); //listen only seems to always accept FD frames
     else 
     {
-      if (!inFDMode) Mode(CAN_CLASSIC_MODE);
-      else Mode(CAN_NORMAL_MODE);
+      if (!inFDMode) SetMode(CAN_CLASSIC_MODE);
+      else SetMode(CAN_NORMAL_MODE);
     }
 }
 
 void MCP2517FD::enable()
 {
-    if (!inFDMode) Mode(CAN_CLASSIC_MODE);
-    else Mode(CAN_NORMAL_MODE);
+    if (!inFDMode) SetMode(CAN_CLASSIC_MODE);
+    else SetMode(CAN_NORMAL_MODE);
 }
 
 void MCP2517FD::disable()
 {
-    Mode(CAN_CONFIGURATION_MODE);
+    SetMode(CAN_CONFIGURATION_MODE);
 }
 
 bool MCP2517FD::sendFrame(CAN_FRAME& txFrame)
@@ -1082,7 +1081,7 @@ bool MCP2517FD::Interrupt() {
   return (digitalRead(_INT)==LOW);
 }
 
-bool MCP2517FD::Mode(byte mode) {
+bool MCP2517FD::SetMode(byte mode) {
   uint32_t tempMode;
   if (DEBUG_PRINT) Serial.println("Mode");
   tempMode = Read(ADDR_CiCON);

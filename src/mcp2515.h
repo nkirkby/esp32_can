@@ -79,7 +79,7 @@ class MCP2515 : public CAN_COMMON
 
 	// Extra functions
 	bool Interrupt(); // Expose state of INT pin
-	bool Mode(uint8_t mode); // Returns TRUE if mode change successful
+	bool SetMode(uint8_t mode); // Returns TRUE if mode change successful
 	void setINTPin(uint8_t pin);
 	void setCSPin(uint8_t pin);
 	void EnqueueRX(CAN_FRAME& newFrame);

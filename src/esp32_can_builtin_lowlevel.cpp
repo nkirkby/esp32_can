@@ -222,6 +222,7 @@ int CAN_init()
 	gpio_matrix_in(CAN_cfg.rx_pin_id,CAN_RX_IDX,0);
 	gpio_pad_select_gpio(CAN_cfg.rx_pin_id);
 
+
     //set to PELICAN mode
 	MODULE_CAN->CDR.B.CAN_M     =0x1;
 

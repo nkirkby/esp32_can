@@ -185,7 +185,7 @@ int MCP2515::Init(uint32_t CAN_Bus_Speed, uint8_t Freq) {
 		  interruptFlags = Read(CANINTF);
 		  if(!(interruptFlags & MERRF)) {
 		    // to get here we must have received something without errors
-		    Mode(MODE_NORMAL);
+		    SetMode(MODE_NORMAL);
 			savedBaud = i;
 			savedFreq = Freq;	
 			running = 1;
@@ -221,7 +221,7 @@ int MCP2515::Init(uint32_t CAN_Bus_Speed, uint8_t Freq, uint8_t SJW) {
 		  interruptFlags = Read(CANINTF);
 		  if(!(interruptFlags & MERRF)) {
 		    // to get here we must have received something without errors
-		    Mode(MODE_NORMAL);
+		    SetMode(MODE_NORMAL);
 			savedBaud = i;
 			savedFreq = Freq;
 			running = 1;
@@ -339,14 +339,14 @@ bool MCP2515::_init(uint32_t CAN_Bus_Speed, uint8_t Freq, uint8_t SJW, bool auto
   
   if(!autoBaud) {
     // Return to Normal mode
-    if(!Mode(MODE_NORMAL)) 
+    if(!SetMode(MODE_NORMAL)) 
     {
         //SerialUSB.println("Could not enter normal mode");
         return false;
     }
   } else {
     // Set to Listen Only mode
-    if(!Mode(MODE_LISTEN)) 
+    if(!SetMode(MODE_LISTEN)) 
     {
         //SerialUSB.println("Could not enter listen only mode");
         return false;
@@ -451,18 +451,18 @@ uint32_t MCP2515::set_baudrate(uint32_t ul_baudrate)
 void MCP2515::setListenOnlyMode(bool state)
 {
     if (state)
-        Mode(MODE_LISTEN);
-    else Mode(MODE_NORMAL);
+        SetMode(MODE_LISTEN);
+    else SetMode(MODE_NORMAL);
 }
 
 void MCP2515::enable()
 {
-    Mode(MODE_NORMAL);
+    SetMode(MODE_NORMAL);
 }
 
 void MCP2515::disable()
 {
-    Mode(MODE_CONFIG); //should knock it off the CAN bus and keep it from doing anything
+    SetMode(MODE_CONFIG); //should knock it off the CAN bus and keep it from doing anything
 }
 
 bool MCP2515::sendFrame(CAN_FRAME& txFrame)
@@ -692,7 +692,7 @@ bool MCP2515::Interrupt() {
   return (digitalRead(_INT)==LOW);
 }
 
-bool MCP2515::Mode(byte mode) {
+bool MCP2515::SetMode(byte mode) {
   /*
   mode can be one of the following:
   MODE_CONFIG
@@ -745,7 +745,7 @@ void MCP2515::SetRXMask(uint8_t mask, uint32_t MaskValue) {
 	uint8_t oldMode;
 	
 	oldMode = Read(CANSTAT);
-	Mode(MODE_CONFIG); //have to be in config mode to change mask
+ SetMode(MODE_CONFIG); //have to be in config mode to change mask
 
 	temp_buff[0] = byte(MaskValue >> 3);
 	temp_buff[1] = byte((MaskValue & 7)  << 5);
@@ -755,7 +755,7 @@ void MCP2515::SetRXMask(uint8_t mask, uint32_t MaskValue) {
 	
 	Write(mask, temp_buff, 4); //send the four byte mask out to the proper address
 	
-	Mode(oldMode);
+ SetMode(oldMode);
 }
 
 /*
@@ -771,7 +771,7 @@ void MCP2515::SetRXFilter(uint8_t filter, uint32_t FilterValue, bool ext) {
 		
 	oldMode = Read(CANSTAT);
 
-	Mode(MODE_CONFIG); //have to be in config mode to change mask
+ SetMode(MODE_CONFIG); //have to be in config mode to change mask
 	temp_buff[0] = byte(FilterValue >> 3);
 	temp_buff[1] = byte((FilterValue & 7)  << 5);
 	temp_buff[2] = 0;
@@ -786,7 +786,7 @@ void MCP2515::SetRXFilter(uint8_t filter, uint32_t FilterValue, bool ext) {
 	
 	Write(filter, temp_buff, 4); //send the four byte mask out to the proper address
 	
-	Mode(oldMode);
+ SetMode(oldMode);
 }
 
 void MCP2515::GetRXFilter(uint8_t filter, uint32_t &filterVal, boolean &isExtended)
@@ -796,7 +796,7 @@ void MCP2515::GetRXFilter(uint8_t filter, uint32_t &filterVal, boolean &isExtend
 		
 	oldMode = Read(CANSTAT);
 
-	Mode(MODE_CONFIG); //have to be in config mode to change mask
+ SetMode(MODE_CONFIG); //have to be in config mode to change mask
 
     Read(filter, temp_buff, 4);
 
@@ -813,7 +813,7 @@ void MCP2515::GetRXFilter(uint8_t filter, uint32_t &filterVal, boolean &isExtend
         filterVal |= temp_buff[3] << 11;
     }
 
-	Mode(oldMode);
+ SetMode(oldMode);
 }
 
 void MCP2515::GetRXMask(uint8_t mask, uint32_t &filterVal)
@@ -823,7 +823,7 @@ void MCP2515::GetRXMask(uint8_t mask, uint32_t &filterVal)
 
 	oldMode = Read(CANSTAT);
 
-	Mode(MODE_CONFIG); //have to be in config mode to change mask
+ SetMode(MODE_CONFIG); //have to be in config mode to change mask
 
   Read(mask, temp_buff, 4);
 
@@ -833,7 +833,7 @@ void MCP2515::GetRXMask(uint8_t mask, uint32_t &filterVal)
   filterVal |= temp_buff[2] << 19;
   filterVal |= temp_buff[3] << 11;
 
-	Mode(oldMode);
+ SetMode(oldMode);
 }
 
 
