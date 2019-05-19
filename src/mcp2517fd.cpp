@@ -133,16 +133,17 @@ void MCP2517FD::sendCallback(CAN_FRAME_FD *frame)
     }
     else //C function callback
     {
-        if (isFD)
-        {
-          if (mb > -1) (*cbCANFrameFD[mb])(frame);
-          else (*cbGeneralFD)(frame);
-        }
-        else
-        {
-          if (mb > -1) (*cbCANFrame[mb])(&stdFrame);
-          else (*cbGeneral)(&stdFrame);
-        }
+        (*cbGeneral)(&stdFrame);
+        // if (isFD)
+        // {
+        //   if (mb > -1) (*cbCANFrameFD[mb])(frame);
+        //   else (*cbGeneralFD)(frame);
+        // }
+        // else
+        // {
+        //   if (mb > -1) (*cbCANFrame[mb])(&stdFrame);
+        //   else (*cbGeneral)(&stdFrame);
+        // }
     }
 }
 
@@ -1291,6 +1292,7 @@ void MCP2517FD::handleTXFifo(int fifo, CAN_FRAME_FD &newFrame)
   uint32_t status;
   uint16_t addr;
   BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+  static int has_warned;
 
   if (fifo < 0) return;
   if (fifo > 2) return;
@@ -1309,6 +1311,15 @@ void MCP2517FD::handleTXFifo(int fifo, CAN_FRAME_FD &newFrame)
     if (xQueueSend(txQueue[fifo], &newFrame, 0) == pdPASS) 
     {
       xHigherPriorityTaskWoken = xTaskNotifyGive(intTaskFD); //send notice to the handler task that it can do the SPI transaction now
+    }
+    else
+    {
+      if (!has_warned)
+      {
+        Serial.println("tx Buffer overflow on CAN1: MCP2517");
+        has_warned = 1;
+      }
+
     }
   //}
 }

@@ -285,6 +285,7 @@ bool ESP32CAN::processFrame(CAN_frame_t &frame)
 bool ESP32CAN::sendFrame(CAN_FRAME& txFrame)
 {
     CAN_frame_t __TX_frame;
+    static int has_warned;
 
     __TX_frame.MsgID = txFrame.id;
     __TX_frame.FIR.B.DLC = txFrame.length;
@@ -294,7 +295,14 @@ bool ESP32CAN::sendFrame(CAN_FRAME& txFrame)
 
     if (CAN_TX_IsBusy()) //hardware already sending, queue for sending when possible
     {
-        xQueueSend(CAN_cfg.tx_queue,&__TX_frame,0);
+        if ((xQueueSend(CAN_cfg.tx_queue,&__TX_frame,0)) != pdTRUE)
+        {
+            if (!has_warned)
+            {
+                Serial.println("tx Buffer overflow on CAN0: builtin");
+                has_warned =1;
+            }
+        }
     }
     else //hardware is free, send immediately
     {
