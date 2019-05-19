@@ -5,7 +5,7 @@
 #include "mcp2517fd_regs.h"
 #include <SPI.h>
 
-#define DEBUG_PRINT false
+#define DEBUG_PRINT true
 
 //20Mhz is the fastest we can go
 #define SPI_SPEED 20000000
@@ -36,7 +36,7 @@ void task_MCPIntFD( void *pvParameters )
 void task_ResetWatcher(void *pvParameters)
 {
   MCP2517FD* mcpCan = (MCP2517FD*)pvParameters;
-  const TickType_t xDelay = 2000 / portTICK_PERIOD_MS;
+  const TickType_t xDelay = 100 / portTICK_PERIOD_MS;
 
   for(;;)
   {
@@ -460,7 +460,7 @@ bool MCP2517FD::_init(uint32_t CAN_Bus_Speed, uint8_t Freq, uint8_t SJW, bool au
   canConfig.bF.ProtocolExceptionEventDisable = 0; //Allow softer handling of protocol exception
   canConfig.bF.WakeUpFilterEnable = 0; //Not using wakeup filter
   canConfig.bF.BitRateSwitchDisable = 1; //We won't allow FD rate switching in this standard init function
-  canConfig.bF.RestrictReTxAttempts = 1; //Don't try sending frames forever if no one acks them
+  canConfig.bF.RestrictReTxAttempts = 0; //Don't try sending frames forever if no one acks them
   canConfig.bF.EsiInGatewayMode = 0; //ESI reflects error status 
   canConfig.bF.SystemErrorToListenOnly = 1; //Auto switch to listen only on system err bit
   canConfig.bF.StoreInTEF = 0; // Don't store transmitted messages back into RAM
@@ -591,7 +591,7 @@ bool MCP2517FD::_initFD(uint32_t nominalSpeed, uint32_t dataSpeed, uint8_t freq,
   canConfig.bF.ProtocolExceptionEventDisable = 0; //Allow softer handling of protocol exception
   canConfig.bF.WakeUpFilterEnable = 0; //Not using wakeup filter
   canConfig.bF.BitRateSwitchDisable = 0; //Let each TX frame tell us whether to use FD rate switching or not
-  canConfig.bF.RestrictReTxAttempts = 1; //Don't try sending frames forever if no one acks them
+  canConfig.bF.RestrictReTxAttempts = 1; //Retransmit forever before going into a TX error state
   canConfig.bF.EsiInGatewayMode = 0; //ESI reflects error status 
   canConfig.bF.SystemErrorToListenOnly = 1; //Auto switch to listen only on system err bit
   canConfig.bF.StoreInTEF = 0; // Don't store transmitted messages back into RAM
@@ -790,38 +790,55 @@ uint32_t MCP2517FD::getBitConfig()
 //Prints to screen basically all of the important registers including debugging registers.
 void MCP2517FD::printDebug()
 {
+  char buf[100];
   Serial.println();
-  Serial.print("Diag0: ");
-  Serial.print(getCIBDIAG0(), HEX);
-  Serial.print("  Diag1: ");
-  Serial.print(getCIBDIAG1(), HEX);
-  Serial.print("  ErrFlags: ");
-  Serial.println(errorFlags, HEX);
-
-  Serial.print("Ctrl: ");
-  Serial.print(Read(ADDR_CiCON), HEX);
-  Serial.print("  NomBits: ");
-  Serial.print(Read(ADDR_CiNBTCFG), HEX);
-  Serial.print("  DataBits: ");
-  Serial.print(Read(ADDR_CiDBTCFG), HEX);
-  Serial.print("  TDC: ");
-  Serial.println(Read(ADDR_CiTDC), HEX);
+  Serial.println("CiBDIAG0:");
+  uint32_t tmp = getCIBDIAG0();
+  sprintf(buf, "DTERRCNT: %d\nDRERRCNT: %d\nNTERRCNT: %d\nNRERRCNT: %d\n", (tmp & 0xFF000000) >> 24, (tmp & 0xFF0000) >> 16, (tmp & 0xFF00) >> 8, (tmp & 0xFF));
+  Serial.print(buf);
   
-  Serial.print("TxqCon: ");
-  Serial.print(Read(ADDR_CiTXQCON), HEX);
-  Serial.print("  TsCon: ");
-  Serial.print(Read(ADDR_CiTSCON), HEX);
-  Serial.print("  Int: ");
-  Serial.println(Read(ADDR_CiINT), HEX);
+  Serial.println("CiBDIAG1:");
+  tmp = getCIBDIAG1();
+  sprintf(buf, "DLCMM: %d\nESI: %d\nDCRERR: %d\nDCSTUFERR: %d\n", (tmp & 32) >> 31, (tmp & 31) >> 30, (tmp & 30) >> 29, (tmp & 29) >> 28);
+  Serial.print(buf);
+  sprintf(buf, "DFORMERR: %d\nDBIT1ERR: %d\nDBIT0ERR: %d\nTXBOERR: %d\n", (tmp & 27) >> 26, (tmp & 25) >> 24, (tmp & 24) >> 23, (tmp & 23) >> 22);
+  Serial.print(buf);
+  sprintf(buf, "NCRCERR: %d\nNSTUFERR: %d\nNFORMERR: %d\nNACKERR: %d\n", (tmp & 21) >> 20, (tmp & 20) >> 19, (tmp & 19) >> 18, (tmp & 18) >> 17);
+  Serial.print(buf);
+  sprintf(buf, "NBIT1ERR: %d\nNBIT0ERR: %d\nEFMSGCNT: %d\n", (tmp & 17) >> 16, (tmp & 16) >> 15, (tmp & 0xFFFF));
+  Serial.print(buf);
 
-  Serial.print("F0Ctrl: ");
-  Serial.print(Read(ADDR_CiFIFOCON), HEX);
-  Serial.print("  F1Ctrl: ");
-  Serial.print(Read(ADDR_CiFIFOCON + CiFIFO_OFFSET), HEX);
-  Serial.print("  F2Ctrl: ");
-  Serial.print(Read(ADDR_CiFIFOCON + CiFIFO_OFFSET * 2), HEX);
-  Serial.print("  F3Ctrl: ");
-  Serial.println(Read(ADDR_CiFIFOCON + CiFIFO_OFFSET * 3), HEX);
+  tmp = Read(ADDR_CiTREC);
+  Serial.println("CiTREC:");
+  sprintf(buf, "TXBO: %d\nTXBP: %d\nRXBP: %d\nTXWARN: %d\n", (tmp & 21) >> 20, (tmp & 20) >> 19, (tmp & 19) >> 18, (tmp & 18) >> 17);
+  Serial.print(buf);
+  sprintf(buf, "RXWARN: %d\nEWARN: %d\nTEC: %d\nREC: %d\n", (tmp & 17) >> 16, (tmp & 16) >> 15, (tmp & 0xFF00) >> 16, tmp & 0xFF);
+  Serial.print(buf);
+
+  // Serial.print("Ctrl: ");
+  // Serial.print(Read(ADDR_CiCON), HEX);
+  // Serial.print("  NomBits: ");
+  // Serial.print(Read(ADDR_CiNBTCFG), HEX);
+  // Serial.print("  DataBits: ");
+  // Serial.print(Read(ADDR_CiDBTCFG), HEX);
+  // Serial.print("  TDC: ");
+  // Serial.println(Read(ADDR_CiTDC), HEX);
+  
+  // Serial.print("TxqCon: ");
+  // Serial.print(Read(ADDR_CiTXQCON), HEX);
+  // Serial.print("  TsCon: ");
+  // Serial.print(Read(ADDR_CiTSCON), HEX);
+  // Serial.print("  Int: ");
+  // Serial.println(Read(ADDR_CiINT), HEX);
+
+  // Serial.print("F0Ctrl: ");
+  // Serial.print(Read(ADDR_CiFIFOCON), HEX);
+  // Serial.print("  F1Ctrl: ");
+  // Serial.print(Read(ADDR_CiFIFOCON + CiFIFO_OFFSET), HEX);
+  // Serial.print("  F2Ctrl: ");
+  // Serial.print(Read(ADDR_CiFIFOCON + CiFIFO_OFFSET * 2), HEX);
+  // Serial.print("  F3Ctrl: ");
+  // Serial.println(Read(ADDR_CiFIFOCON + CiFIFO_OFFSET * 3), HEX);
 }
 
 void MCP2517FD::Reset() {
@@ -1193,6 +1210,12 @@ void MCP2517FD::intHandler(void) {
         handleFrameDispatch(message, filtHit);
       }
     }
+    REG_CiBDIAG0 diag0;
+    diag0.word = getCIBDIAG0();
+    if (diag0.bF.NTxErrorCount)
+    {
+      needMCPReset = true;
+    }
     if (interruptFlags & (1 << 11)) //Receive Object Overflow
     {
       //once again, we know which FIFO must have overflowed - what to do about it though?
@@ -1308,19 +1331,20 @@ void MCP2517FD::handleTXFifo(int fifo, CAN_FRAME_FD &newFrame)
   //{
     //try to queue, do not wait if we can't. If we can then pretend an interrupt happened.
     if (!txQueue[fifo]) return;
-    if (xQueueSend(txQueue[fifo], &newFrame, 0) == pdPASS) 
-    {
+    // if (xQueueSend(txQueue[fifo], &newFrame, 0) == pdPASS) 
+    xQueueSend(txQueue[fifo], &newFrame, 0);
+    // {
       xHigherPriorityTaskWoken = xTaskNotifyGive(intTaskFD); //send notice to the handler task that it can do the SPI transaction now
-    }
-    else
-    {
-      if (!has_warned)
-      {
-        Serial.println("tx Buffer overflow on CAN1: MCP2517");
-        has_warned = 1;
-      }
+    // }
+    // else
+    // {
+    //   if (!has_warned)
+    //   {
+    //     Serial.println("tx Buffer overflow on CAN1: MCP2517");
+    //     has_warned = 1;
+    //   }
 
-    }
+    // }
   //}
 }
 
