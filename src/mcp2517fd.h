@@ -2,14 +2,13 @@
 #define MCP2517_h
 
 #include "Arduino.h"
+#include "mcp25xxfd.h"
 #include "mcp2517fd_defines.h"
 #include <can_common.h>
 
 #define TRACE() ({Serial.print(__LINE__); Serial.print(":"); Serial.print(__FILE__); Serial.println();})
 
 //#define DEBUG_SETUP
-#define RX_BUFFER_SIZE	64
-#define TX_BUFFER_SIZE  16  //there are three buffers though so (value * 3)
 
 #define NUM_FILTERS 32
 
