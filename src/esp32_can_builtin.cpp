@@ -284,8 +284,11 @@ bool ESP32CAN::processFrame(CAN_frame_t &frame)
 
 bool ESP32CAN::sendFrame(CAN_FRAME& txFrame)
 {
+    static unsigned int unable_to_tx_counter;
+    static unsigned int c;
+
     CAN_frame_t __TX_frame;
-    static int has_warned;
+
 
     __TX_frame.MsgID = txFrame.id;
     __TX_frame.FIR.B.DLC = txFrame.length;
@@ -297,17 +300,22 @@ bool ESP32CAN::sendFrame(CAN_FRAME& txFrame)
     {
         if ((xQueueSend(CAN_cfg.tx_queue,&__TX_frame,0)) != pdTRUE)
         {
-            if (!has_warned)
-            {
-                Serial.println("tx Buffer overflow on CAN0: builtin");
-                has_warned =1;
-            }
+            if (unable_to_tx_counter % 1000 == 0)
+                Serial.printf("tx Buffer overflow on CAN0.  %d frames untransmitted.  Is it connected properly?\n", unable_to_tx_counter + 1);
+            unable_to_tx_counter++;
+        }
+        else
+        {
+        //  if ( c % 100 == 0)  Serial.printf("qid: %x\n", txFrame.id);
+            unable_to_tx_counter = 0;  // One successful enqueue resets this counter
         }
     }
     else //hardware is free, send immediately
     {
+        // if ( c % 100 == 0) Serial.printf(">id: %x\n", txFrame.id);
         CAN_write_frame(&__TX_frame);
     }
+    c++;
 }
 
 bool ESP32CAN::rx_avail()

@@ -41,9 +41,12 @@ class MCP2517FD : public CAN_COMMON
     uint32_t set_baudrateFD(uint32_t nominalSpeed, uint32_t dataSpeed);
     bool sendFrameFD(CAN_FRAME_FD& txFrame);
     uint32_t initFD(uint32_t nominalRate, uint32_t dataRate);
+	ACAN2517 *driver;
+	ACAN2517Filters *filters;
+	void sendCallback(CAN_FRAME *frame);
+	QueueHandle_t tx_queue;
 	
   private:
-	ACAN2517 *driver;
 	bool _init(uint32_t baud, uint8_t freq, uint8_t sjw, bool autoBaud);
 	bool _initFD(uint32_t nominalSpeed, uint32_t dataSpeed, uint8_t freq, uint8_t sjw, bool autoBaud);
 	void initSPI();

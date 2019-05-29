@@ -51,6 +51,7 @@ static portMUX_TYPE builtincan_spinlock = portMUX_INITIALIZER_UNLOCKED;
 
 extern "C" void IRAM_ATTR CAN_isr(void *arg_p)
 {
+    static int c;
 	//Interrupt flag buffer
 	__CAN_IRQ_t interrupt;
     CAN_frame_t __frame;
@@ -70,6 +71,7 @@ extern "C" void IRAM_ATTR CAN_isr(void *arg_p)
         {
             xQueueReceiveFromISR(CAN_cfg.tx_queue, &__frame, NULL);
             CAN_write_frame(&__frame);
+            // if (c++ % 10 == 0 ) Serial.printf("uq: 0x%x\n", __frame.MsgID);
         }
     }
 
