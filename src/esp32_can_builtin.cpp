@@ -177,7 +177,7 @@ uint32_t ESP32CAN::init(uint32_t ul_baudrate)
         callbackQueue = xQueueCreate(16, sizeof(CAN_FRAME));
         CAN_initRXQueue();
                   //func        desc    stack, params, priority, handle to task
-        xTaskCreate(&task_CAN, "CAN_RX", 2048, this, 15, NULL);
+        xTaskCreate(&task_CAN, "CAN_RX", 4096, this, 15, NULL);  // Bumped this stack size to handle callbacks
         xTaskCreatePinnedToCore(&task_LowLevelRX, "CAN_LORX", 2048, this, 19, NULL, 1);
         xTaskCreatePinnedToCore(&CAN_WatchDog_Builtin, "CAN_WD_BI", 2048, this, 10, NULL, 1);
         initializedResources = true;
@@ -296,6 +296,7 @@ bool ESP32CAN::sendFrame(CAN_FRAME& txFrame)
     __TX_frame.FIR.B.FF = (CAN_frame_format_t)txFrame.extended;
     for (int i = 0; i < 8; i++) __TX_frame.data.u8[i] = txFrame.data.byte[i];
 
+    c++;
     if (CAN_TX_IsBusy()) //hardware already sending, queue for sending when possible
     {
         if ((xQueueSend(CAN_cfg.tx_queue,&__TX_frame,0)) != pdTRUE)
@@ -303,19 +304,21 @@ bool ESP32CAN::sendFrame(CAN_FRAME& txFrame)
             if (unable_to_tx_counter % 1000 == 0)
                 Serial.printf("tx Buffer overflow on CAN0.  %d frames untransmitted.  Is it connected properly?\n", unable_to_tx_counter + 1);
             unable_to_tx_counter++;
+            return 0;
         }
         else
         {
         //  if ( c % 100 == 0)  Serial.printf("qid: %x\n", txFrame.id);
             unable_to_tx_counter = 0;  // One successful enqueue resets this counter
+            return 1;
         }
     }
     else //hardware is free, send immediately
     {
         // if ( c % 100 == 0) Serial.printf(">id: %x\n", txFrame.id);
         CAN_write_frame(&__TX_frame);
+        return 1;
     }
-    c++;
 }
 
 bool ESP32CAN::rx_avail()

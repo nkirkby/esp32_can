@@ -7,6 +7,8 @@
 
 #define TX_QUEUE_SIZE 1000
 
+
+
 // Constructor defining which pins to use for CS and INT
 MCP2517FD::MCP2517FD(uint8_t CS_Pin, uint8_t INT_Pin, ACAN2517 *acan) : 
     CAN_COMMON(32),
@@ -67,7 +69,7 @@ void rx_task( void *pvParameters )
                 avg += msgs_retrieved_per_cycle[i];
             }
             avg /= (max_idx + 1);
-            Serial.printf("receive poll task with mcp %p is still running.  receiving avg of %f frames per 1ms cycle from driver. (avg of %d cycles)\n", mcp, avg, max_idx);
+            // Serial.printf("receive poll task with mcp %p is still running.  receiving avg of %f frames per 1ms cycle from driver. (avg of %d cycles)\n", mcp, avg, max_idx);
         }
         vTaskDelay(1 / portTICK_PERIOD_MS);
     }
@@ -83,7 +85,7 @@ void tx_task(void *pvParameters)
     {
         if (mcp->tx_queue != NULL)
         {
-            Serial.printf("tx queue spaces remaining: %d\n", uxQueueSpacesAvailable(mcp->tx_queue));
+            // Serial.printf("tx queue spaces remaining: %d\n", uxQueueSpacesAvailable(mcp->tx_queue));
             xQueueReceive(mcp->tx_queue, &msg, portMAX_DELAY);
             while(false == ((sent = mcp->driver->tryToSend(*msg)))) { /* keep trying  */ } // Returns false if buffer is full
             free(msg);
@@ -100,6 +102,13 @@ int g_counter = 0;
 
 #include <unistd.h>
 
+
+void poll_timer_task(void *pvParameters)
+{
+    MCP2517FD *mcp = (MCP2517FD *)pvParameters;
+	while(mcp->driver->isr_core()) {}
+}
+
 // Required CAN_COMMON overrides
 uint32_t MCP2517FD::init(uint32_t ul_baudrate)
 {
@@ -110,8 +119,18 @@ uint32_t MCP2517FD::init(uint32_t ul_baudrate)
     char *name = (char*)malloc(sizeof(char) * 20);
     snprintf(name, 19, "MCP_TX_%d", g_counter);
     snprintf(name, 19, "MCP_RX_%d", g_counter++);
-    xTaskCreatePinnedToCore(&rx_task, name, 2048, this, 10, NULL, 1);
+    xTaskCreatePinnedToCore(&rx_task, name, 4096, this, 10, NULL, 1);
     xTaskCreatePinnedToCore(&tx_task, name, 2048, this, 4, NULL, 1);
+
+
+	esp_timer_create_args_t poll_timer_task_args;
+	poll_timer_task_args.callback = &poll_timer_task;
+    poll_timer_task_args.arg = this;
+	poll_timer_task_args.name = "poll timer task";
+
+    esp_timer_handle_t poll_timer;
+    ESP_ERROR_CHECK(esp_timer_create(&poll_timer_task_args, &poll_timer));
+	ESP_ERROR_CHECK(esp_timer_start_periodic(poll_timer, 1000));
     return 0;
 }
 
@@ -160,7 +179,7 @@ void MCP2517FD::setListenOnlyMode(bool state)
 bool MCP2517FD::sendFrame(CAN_FRAME& txFrame)
 {
     CANMessage *msg = new CANMessage;
-    static int counter;
+    static int missed_messages;
     bool sent;
 
     msg->id = txFrame.id;
@@ -171,9 +190,15 @@ bool MCP2517FD::sendFrame(CAN_FRAME& txFrame)
 
     if (xQueueSend(tx_queue, &msg, 0) == errQUEUE_FULL)
     {
-        Serial.printf("ERROR: CAN %p tx queue is full\n", this->driver);
+        missed_messages++;
+        if (missed_messages % 1000 == 1)
+            Serial.printf("ERROR: %s MCP2517FD tx queue is full.  Dropped %d frames since last successful send\n", this->name, missed_messages);
+        free(msg);
         return -1;
     }
+    if (missed_messages)
+        Serial.printf("queue's empty now");
+    missed_messages = 0;
     return 0;
 }
 
@@ -189,8 +214,8 @@ uint16_t MCP2517FD::available() //like rx_avail but returns the number of waitin
 
 uint32_t MCP2517FD::get_rx_buff(CAN_FRAME &msg)
 {
-    Serial.println("get_rx_buff not implemented!");
-    return driver->available();
+    Serial.printf("get_rx_buff not implemented\n");
+    return 0; 
 }
 uint32_t MCP2517FD::get_rx_buffFD(CAN_FRAME_FD &msg)
 {
