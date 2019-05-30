@@ -85,9 +85,11 @@ void tx_task(void *pvParameters)
     {
         if (mcp->tx_queue != NULL)
         {
-            // Serial.printf("tx queue spaces remaining: %d\n", uxQueueSpacesAvailable(mcp->tx_queue));
-            xQueueReceive(mcp->tx_queue, &msg, portMAX_DELAY);
-            while(false == ((sent = mcp->driver->tryToSend(*msg)))) { /* keep trying  */ } // Returns false if buffer is full
+            xQueueReceive(mcp->tx_queue, &msg, portMAX_DELAY);  // blocks until a message is ready
+            if (false == ((mcp->driver->tryToSend(*msg))))
+            {
+                Serial.printf("Failed to send CAN message with id 0x%x\n", msg->id);
+            } 
             free(msg);
         }
         else
