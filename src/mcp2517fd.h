@@ -15,7 +15,7 @@ class MCP2517FD : public CAN_COMMON
 {
   public:
 	// Constructor defining which pins to use for CS and INT
-    MCP2517FD(uint8_t CS_Pin, uint8_t INT_Pin, ACAN2517 *acan);
+    MCP2517FD(uint8_t CS_Pin, SPIClass & SPI, uint8_t INT_Pin);
 	
 	// Overloaded initialization function
 	int Init(uint32_t nominalBaud, uint8_t freq);
@@ -26,7 +26,8 @@ class MCP2517FD : public CAN_COMMON
 	int _setFilterSpecific(uint8_t mailbox, uint32_t id, uint32_t mask, bool extended);
     int _setFilter(uint32_t id, uint32_t mask, bool extended);
 	void resetHardware();
-	uint32_t init(uint32_t ul_baudrate);
+	uint32_t init(uint32_t ul_baudrate);		// For compatibility, uses default ACAN settings
+	uint32_t init(ACAN2517Settings &settings);	// Custom ACAN settings may be provided
     uint32_t beginAutoSpeed();
     uint32_t set_baudrate(uint32_t ul_baudrate);
     void setListenOnlyMode(bool state);
@@ -41,7 +42,8 @@ class MCP2517FD : public CAN_COMMON
     uint32_t set_baudrateFD(uint32_t nominalSpeed, uint32_t dataSpeed);
     bool sendFrameFD(CAN_FRAME_FD& txFrame);
     uint32_t initFD(uint32_t nominalRate, uint32_t dataRate);
-	ACAN2517 *driver;
+	ACAN2517 driver;
+	ACAN2517Settings settings;
 	ACAN2517Filters *filters;
 	void sendCallback(CAN_FRAME *frame);
 	QueueHandle_t tx_queue;
