@@ -70,12 +70,16 @@ public:
   void setListenOnlyMode(bool state);
   void enable();
   void disable();
-  bool sendFrame(CAN_FRAME& txFrame);
+  bool _sendFrame(CAN_FRAME& txFrame);
   bool rx_avail();
   uint16_t available(); //like rx_avail but returns the number of waiting frames
-  uint32_t get_rx_buff(CAN_FRAME &msg);
+  uint32_t _get_rx_buff(CAN_FRAME &msg);
   bool processFrame(CAN_frame_t &frame);
   void sendCallback(CAN_FRAME *frame);
+  
+  uint32_t set_baudrateFD(uint32_t nominalSpeed, uint32_t dataSpeed);
+  uint32_t initFD(uint32_t nominalRate, uint32_t dataRate);
+  bool sendFrameFD(CAN_FRAME_FD& txFrame);
 
   void setCANPins(gpio_num_t rxPin, gpio_num_t txPin);
 

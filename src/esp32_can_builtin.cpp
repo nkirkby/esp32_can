@@ -105,20 +105,7 @@ void ESP32CAN::sendCallback(CAN_FRAME *frame)
     int mb;
     int idx;
 
-    mb = (frame->fid & 0xFF);
-    if (mb == 0xFF) mb = -1;
-
-    if (frame->fid & 0x80000000ul) //object callback
-    {
-        idx = (frame->fid >> 24) & 0x7F;
-        thisListener = listener[idx];
-        thisListener->gotFrame(frame, mb);
-    }
-    else //C function callback
-    {
-        if (mb > -1) (*cbCANFrame[mb])(frame);
-        else (*cbGeneral)(frame);
-    }
+    (*cbGeneral)(frame);
 }
 
 ESP32CAN::ESP32CAN() : CAN_COMMON(NUM_FILTERS) 
@@ -233,56 +220,12 @@ bool ESP32CAN::processFrame(CAN_frame_t &frame)
     msg.extended = frame.FIR.B.FF;
     for (int i = 0; i < 8; i++) msg.data.byte[i] = frame.data.u8[i];
     
-    for (int i = 0; i < NUM_FILTERS; i++)
-    {
-        if (!filters[i].configured) continue;
-        if ((msg.id & filters[i].mask) == filters[i].id && (filters[i].extended == msg.extended))
-        {
-            //frame is accepted, lets see if it matches a mailbox callback
-            if (cbCANFrame[i])
-            {
-                msg.fid = i;
-                xQueueSend(callbackQueue, &msg, 0);
-                return true;
-            }
-            else if (cbGeneral)
-            {
-                msg.fid = 0xFF;
-                xQueueSend(callbackQueue, &msg, 0);
-                return true;
-            }
-            else
-            {
-                for (int listenerPos = 0; listenerPos < SIZE_LISTENERS; listenerPos++)
-                {
-                    thisListener = listener[listenerPos];
-                    if (thisListener != NULL)
-                    {
-                        if (thisListener->isCallbackActive(i)) 
-				        {
-					        msg.fid = 0x80000000ul + (listenerPos << 24ul) + i;
-                            xQueueSend(callbackQueue, &msg, 0);
-                            return true;
-				        }
-				        else if (thisListener->isCallbackActive(numFilters)) //global catch-all 
-				        {
-                            msg.fid = 0x80000000ul + (listenerPos << 24ul) + 0xFF;
-					        xQueueSend(callbackQueue, &msg, 0);
-                            return true;
-				        }
-                    }
-                }
-            }
-            
-            //otherwise, send frame to input queue
-            xQueueSend(CAN_cfg.rx_queue, &frame, 0);
-            return true;
-        }
-    }
+    if (xQueueSend(CAN_cfg.rx_queue, &frame, 0) == pdPASS)
+        return true;
     return false;
 }
 
-bool ESP32CAN::sendFrame(CAN_FRAME& txFrame)
+bool ESP32CAN::_sendFrame(CAN_FRAME& txFrame)
 {
     static unsigned int unable_to_tx_counter;
     static unsigned int c;
@@ -333,7 +276,7 @@ uint16_t ESP32CAN::available()
     return uxQueueMessagesWaiting(CAN_cfg.rx_queue);
 }
 
-uint32_t ESP32CAN::get_rx_buff(CAN_FRAME &msg)
+uint32_t ESP32CAN::_get_rx_buff(CAN_FRAME &msg)
 {
     CAN_frame_t __RX_frame;
     //receive next CAN frame from queue
@@ -349,3 +292,5 @@ uint32_t ESP32CAN::get_rx_buff(CAN_FRAME &msg)
     return false;
 }
 
+uint32_t ESP32CAN::set_baudrateFD(uint32_t nominalSpeed, uint32_t dataSpeed) {}
+uint32_t ESP32CAN::initFD(uint32_t nominalRate, uint32_t dataRate) {}

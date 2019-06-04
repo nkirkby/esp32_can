@@ -33,12 +33,11 @@ class MCP2517FD : public CAN_COMMON
     void setListenOnlyMode(bool state);
 	void enable();
 	void disable();
-	bool sendFrame(CAN_FRAME& txFrame);
 	bool rx_avail();
 	uint16_t available(); //like rx_avail but returns the number of waiting frames
-	uint32_t get_rx_buff(CAN_FRAME &msg);
+	bool _sendFrame(CAN_FRAME& txFrame);	// implements CAN_COMMON
+	uint32_t _get_rx_buff(CAN_FRAME &frame);  // implements CAN_COMMON
 	//special FD functions required to reimplement to support FD mode
-	uint32_t get_rx_buffFD(CAN_FRAME_FD &msg);
     uint32_t set_baudrateFD(uint32_t nominalSpeed, uint32_t dataSpeed);
     bool sendFrameFD(CAN_FRAME_FD& txFrame);
     uint32_t initFD(uint32_t nominalRate, uint32_t dataRate);

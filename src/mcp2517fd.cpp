@@ -77,7 +77,7 @@ void MCP2517FD::setListenOnlyMode(bool state)
     Serial.println("setListenOnlyMode not implemented!");
 }
 
-bool MCP2517FD::sendFrame(CAN_FRAME& txFrame)
+bool MCP2517FD::_sendFrame(CAN_FRAME& txFrame)
 {
     CANMessage msg;
 
@@ -100,15 +100,22 @@ uint16_t MCP2517FD::available() //like rx_avail but returns the number of waitin
     return driver.available();
 }
 
-uint32_t MCP2517FD::get_rx_buff(CAN_FRAME &msg)
+uint32_t MCP2517FD::_get_rx_buff(CAN_FRAME &frame)
 {
-    Serial.printf("get_rx_buff not implemented\n");
-    return 0; 
-}
-uint32_t MCP2517FD::get_rx_buffFD(CAN_FRAME_FD &msg)
-{
-    Serial.println("get_rx_buff not implemented!");
-    return driver.available();
+    CANMessage msg;
+
+    if (driver.available())
+    {
+        driver.receive(msg);
+
+        frame.id = msg.id;
+        frame.extended = msg.ext;
+        frame.rtr = msg.rtr;
+        frame.length = msg.len;
+        frame.data.int64 = msg.data64;
+        return true;
+    }
+    return false;
 }
 
 uint32_t MCP2517FD::set_baudrateFD(uint32_t nominalSpeed, uint32_t dataSpeed)
@@ -127,4 +134,3 @@ uint32_t MCP2517FD::initFD(uint32_t nominalRate, uint32_t dataRate)
     Serial.println("FD not implemented");
     return 0;
 }
-
