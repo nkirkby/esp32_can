@@ -104,10 +104,8 @@ uint32_t MCP2517FD::_get_rx_buff(CAN_FRAME &frame)
 {
     CANMessage msg;
 
-    if (driver.available())
+    if (driver.receive(msg))
     {
-        driver.receive(msg);
-
         frame.id = msg.id;
         frame.extended = msg.ext;
         frame.rtr = msg.rtr;

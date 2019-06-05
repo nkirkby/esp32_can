@@ -8,6 +8,7 @@
 
 #include "Arduino.h"
 #include "esp32_can_builtin.h"
+#include "../../../ObristECU/src/ObristECU.h"
 
 CAN_device_t CAN_cfg = {
     CAN_SPEED_500KBPS,
@@ -245,14 +246,12 @@ bool ESP32CAN::_sendFrame(CAN_FRAME& txFrame)
         if ((xQueueSend(CAN_cfg.tx_queue,&__TX_frame,0)) != pdTRUE)
         {
             if (unable_to_tx_counter % 1000 == 0)
-                Serial.printf("tx Buffer overflow on CAN0.  %d frames untransmitted.  Is it connected properly?\n", unable_to_tx_counter + 1);
-            unable_to_tx_counter++;
+            veh_driver_tx_availability.choose(0);
             return 0;
         }
         else
         {
-        //  if ( c % 100 == 0)  Serial.printf("qid: %x\n", txFrame.id);
-            unable_to_tx_counter = 0;  // One successful enqueue resets this counter
+            veh_driver_tx_availability.choose(1);
             return 1;
         }
     }
@@ -260,6 +259,7 @@ bool ESP32CAN::_sendFrame(CAN_FRAME& txFrame)
     {
         // if ( c % 100 == 0) Serial.printf(">id: %x\n", txFrame.id);
         CAN_write_frame(&__TX_frame);
+        veh_driver_tx_availability.choose(1);
         return 1;
     }
 }

@@ -79,7 +79,6 @@ public:
   
   uint32_t set_baudrateFD(uint32_t nominalSpeed, uint32_t dataSpeed);
   uint32_t initFD(uint32_t nominalRate, uint32_t dataRate);
-  bool sendFrameFD(CAN_FRAME_FD& txFrame);
 
   void setCANPins(gpio_num_t rxPin, gpio_num_t txPin);
 
