@@ -32,6 +32,11 @@
 #include <stdint.h>
 #include "can_config.h"
 
+#define CANBI_ENTER_CRITICAL()  portENTER_CRITICAL(&builtincan_spinlock)
+#define CANBI_EXIT_CRITICAL()   portEXIT_CRITICAL(&builtincan_spinlock)
+
+extern portMUX_TYPE builtincan_spinlock ;
+
 /**
  * \brief CAN frame type (standard/extended)
  */

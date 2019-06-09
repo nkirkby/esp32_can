@@ -165,7 +165,7 @@ uint32_t ESP32CAN::init(uint32_t ul_baudrate)
         callbackQueue = xQueueCreate(16, sizeof(CAN_FRAME));
         CAN_initRXQueue();
                   //func        desc    stack, params, priority, handle to task
-        xTaskCreatePinnedToCore(&task_CAN, "CAN_RX", 4096, this, 15, NULL, 1);  // Bumped this stack size to handle callbacks
+        xTaskCreatePinnedToCore(&task_CAN, "CAN_RX", 2048, this, 15, NULL, 1);  
         xTaskCreatePinnedToCore(&task_LowLevelRX, "CAN_LORX", 2048, this, 19, NULL, 1);
         xTaskCreatePinnedToCore(&CAN_WatchDog_Builtin, "CAN_WD_BI", 2048, this, 10, NULL, 1);
         initializedResources = true;
@@ -258,7 +258,9 @@ bool ESP32CAN::_sendFrame(CAN_FRAME& txFrame)
     else //hardware is free, send immediately
     {
         // if ( c % 100 == 0) Serial.printf(">id: %x\n", txFrame.id);
+        CANBI_ENTER_CRITICAL();
         CAN_write_frame(&__TX_frame);
+        CANBI_EXIT_CRITICAL();
         veh_driver_tx_availability.choose(1);
         return 1;
     }

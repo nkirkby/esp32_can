@@ -45,9 +45,7 @@ volatile uint32_t biReadFrames = 0;
 volatile uint32_t needReset = 0;
 QueueHandle_t lowLevelRXQueue;
 
-static portMUX_TYPE builtincan_spinlock = portMUX_INITIALIZER_UNLOCKED;
-#define CANBI_ENTER_CRITICAL()  portENTER_CRITICAL(&builtincan_spinlock)
-#define CANBI_EXIT_CRITICAL()   portEXIT_CRITICAL(&builtincan_spinlock)
+portMUX_TYPE builtincan_spinlock = portMUX_INITIALIZER_UNLOCKED;
 
 extern "C" void IRAM_ATTR CAN_isr(void *arg_p)
 {
@@ -71,7 +69,6 @@ extern "C" void IRAM_ATTR CAN_isr(void *arg_p)
         {
             xQueueReceiveFromISR(CAN_cfg.tx_queue, &__frame, NULL);
             CAN_write_frame(&__frame);
-            // if (c++ % 10 == 0 ) Serial.printf("uq: 0x%x\n", __frame.MsgID);
         }
     }
 
@@ -167,6 +164,7 @@ void CAN_SetListenOnly(bool mode)
 int IRAM_ATTR CAN_write_frame(const CAN_frame_t* p_frame)
 {
 
+
 	//byte iterator
 	uint8_t __byte_i;
 
@@ -200,6 +198,8 @@ int IRAM_ATTR CAN_write_frame(const CAN_frame_t* p_frame)
 
     // Transmit frame
     MODULE_CAN->CMR.B.TR=1;
+
+    if (p_frame->MsgID == 0x312) Serial.printf("MODULE_CAN SR %x\n", MODULE_CAN->SR.U & 0xFF);
 
     return 0;
 }
