@@ -84,7 +84,6 @@ extern "C" void IRAM_ATTR CAN_isr(void *arg_p)
                       | __CAN_IRQ_DATA_OVERRUN			//0x8
                       | __CAN_IRQ_WAKEUP				//0x10
                       | __CAN_IRQ_ERR_PASSIVE			//0x20
-                      | __CAN_IRQ_ARB_LOST				//0x40
                       | __CAN_IRQ_BUS_ERR				//0x80
 	)) != 0) 
     {
@@ -199,7 +198,6 @@ int IRAM_ATTR CAN_write_frame(const CAN_frame_t* p_frame)
     // Transmit frame
     MODULE_CAN->CMR.B.TR=1;
 
-    if (p_frame->MsgID == 0x312) Serial.printf("MODULE_CAN SR %x\n", MODULE_CAN->SR.U & 0xFF);
 
     return 0;
 }
