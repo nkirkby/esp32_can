@@ -246,12 +246,10 @@ bool ESP32CAN::_sendFrame(CAN_FRAME& txFrame)
         if ((xQueueSend(CAN_cfg.tx_queue,&__TX_frame,0)) != pdTRUE)
         {
             if (unable_to_tx_counter % 1000 == 0)
-            veh_driver_tx_availability.choose(0);
             return 0;
         }
         else
         {
-            veh_driver_tx_availability.choose(1);
             return 1;
         }
     }
@@ -261,7 +259,6 @@ bool ESP32CAN::_sendFrame(CAN_FRAME& txFrame)
         CANBI_ENTER_CRITICAL();
         CAN_write_frame(&__TX_frame);
         CANBI_EXIT_CRITICAL();
-        veh_driver_tx_availability.choose(1);
         return 1;
     }
 }
